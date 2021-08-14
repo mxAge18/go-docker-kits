@@ -1,0 +1,97 @@
+version: '3'
+
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+
+volumes:
+  mysql:
+    driver: ${VOLUMES_DRIVER}
+  redis:
+    driver: ${VOLUMES_DRIVER}
+  elasticsearch:
+    driver: ${VOLUMES_DRIVER}
+services:
+  ### MySQL ################################################
+    mysql:
+      build:
+        context: ./mysql
+        args:
+          - MYSQL_VERSION=${MYSQL_VERSION}
+      environment:
+        - MYSQL_DATABASE=${MYSQL_DATABASE}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - TZ=${WORKSPACE_TIMEZONE}
+      volumes:
+        - ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+        - ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+      ports:
+        - "${MYSQL_PORT}:3306"
+      networks:
+        - backend
+### Redis Cluster ##########################################
+    # redis-cluster:
+    #   build: ./redis-cluster
+    #   ports:
+    #     - "${REDIS_CLUSTER_PORT_RANGE}:7000-7005"
+    #   networks:
+    #     - backend
+### ZooKeeper #########################################
+    # zookeeper:
+    #   build: ./zookeeper
+    #   volumes:
+    #     - ${DATA_PATH_HOST}/zookeeper/data:/data
+    #     - ${DATA_PATH_HOST}/zookeeper/datalog:/datalog
+    #   ports:
+    #     - "${ZOOKEEPER_PORT}:2181"
+    #   networks:
+    #     - backend
+### RabbitMQ #############################################
+    # rabbitmq:
+    #   build: ./rabbitmq
+    #   ports:
+    #     - "${RABBITMQ_NODE_HOST_PORT}:5672"
+    #     - "${RABBITMQ_MANAGEMENT_HTTP_HOST_PORT}:15672"
+    #     - "${RABBITMQ_MANAGEMENT_HTTPS_HOST_PORT}:15671"
+    #   privileged: true
+    #   environment:
+    #     - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+    #     - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    #   hostname: laradock-rabbitmq
+    #   volumes:
+    #     - ${DATA_PATH_HOST}/rabbitmq:/var/lib/rabbitmq
+    #   depends_on:
+    #     - php-fpm
+    #   networks:
+    #     - backend
+### ElasticSearch ########################################
+    # elasticsearch:
+    #   build:
+    #     context: ./elasticsearch
+    #     args:
+    #       - ELK_VERSION=${ELK_VERSION}
+    #   volumes:
+    #     - elasticsearch:/usr/share/elasticsearch/data
+    #   environment:
+    #     - cluster.name=laradock-cluster
+    #     - node.name=laradock-node
+    #     - bootstrap.memory_lock=true
+    #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    #     - cluster.initial_master_nodes=laradock-node
+    #   ulimits:
+    #     memlock:
+    #       soft: -1
+    #       hard: -1
+    #     nofile:
+    #       soft: 65536
+    #       hard: 65536
+    #   ports:
+    #     - "${ELASTICSEARCH_HOST_HTTP_PORT}:9200"
+    #     - "${ELASTICSEARCH_HOST_TRANSPORT_PORT}:9300"
+    #   depends_on:
+    #     - php-fpm
+    #   networks:
+    #     - frontend
+    #     - backend
