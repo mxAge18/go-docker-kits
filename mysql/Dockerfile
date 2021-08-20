@@ -1,6 +1,6 @@
 ARG MYSQL_VERSION
 FROM mysql:${MYSQL_VERSION}
-
+LABEL maintainer="xu ma <maxu0410@163.com>"
 # set time zone 
 ARG TZ=UTC
 ENV TZ ${TZ}
