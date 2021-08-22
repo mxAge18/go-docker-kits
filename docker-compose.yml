@@ -17,68 +17,45 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   kibana:
     driver: ${VOLUMES_DRIVER}
+  zookeeper:
+    driver: ${VOLUMES_DRIVER}
+  kafka:
+    driver: ${VOLUMES_DRIVER}
 services:
-  ### MySQL ################################################
-  # mysql:
-  #   build:
-  #     context: ./mysql
-  #     args:
-  #       - MYSQL_VERSION=${MYSQL_VERSION}
-  #   environment:
-  #     - MYSQL_DATABASE=${MYSQL_DATABASE}
-  #     - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-  #     - TZ=${WORKSPACE_TIMEZONE}
-  #   volumes:
-  #     - ${DATA_PATH_HOST}/mysql:/var/lib/mysql
-  #     - ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
-  #   ports:
-  #     - "${MYSQL_PORT}:3306"
-  #   networks:
-  #     - backend
-### Redis ################################################
-  # redis:
-  #   build: ./redis
-  #   volumes:
-  #     - ${DATA_PATH_HOST}/redis:/data
-  #   ports:
-  #     - "${REDIS_PORT}:6379"
-  #   networks:
-  #     - backend
-# ### Redis Cluster ##########################################
-#     redis-cluster:
-#       build: ./redis-cluster
-#       ports:
-#         - "${REDIS_CLUSTER_PORT_RANGE}:7000-7005"
-#       networks:
-#         - backend
-### ZooKeeper #########################################
-    # zookeeper:
-    #   build: ./zookeeper
-    #   volumes:
-    #     - ${DATA_PATH_HOST}/zookeeper/data:/data
-    #     - ${DATA_PATH_HOST}/zookeeper/datalog:/datalog
-    #   ports:
-    #     - "${ZOOKEEPER_PORT}:2181"
-    #   networks:
-    #     - backend
-### RabbitMQ #############################################
-    # rabbitmq:
-    #   build: ./rabbitmq
-    #   ports:
-    #     - "${RABBITMQ_NODE_HOST_PORT}:5672"
-    #     - "${RABBITMQ_MANAGEMENT_HTTP_HOST_PORT}:15672"
-    #     - "${RABBITMQ_MANAGEMENT_HTTPS_HOST_PORT}:15671"
-    #   privileged: true
-    #   environment:
-    #     - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
-    #     - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
-    #   hostname: laradock-rabbitmq
-    #   volumes:
-    #     - ${DATA_PATH_HOST}/rabbitmq:/var/lib/rabbitmq
-    #   depends_on:
-    #     - php-fpm
-    #   networks:
-    #     - backend
+  ## MySQL ################################################
+  mysql:
+    build:
+      context: ./mysql
+      args:
+        - MYSQL_VERSION=${MYSQL_VERSION}
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=${WORKSPACE_TIMEZONE}
+    volumes:
+      - ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+      - ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+    ports:
+      - "${MYSQL_PORT}:3306"
+    networks:
+      - backend
+## Redis ################################################
+  redis:
+    build: ./redis
+    volumes:
+      - ${DATA_PATH_HOST}/redis:/data
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - backend
+### Redis Cluster ##########################################
+  redis-cluster:
+    build: ./redis-cluster
+    ports:
+      - "${REDIS_CLUSTER_PORT_RANGE}:7000-7005"
+    networks:
+      - backend
+
   ## ElasticSearch ########################################
   elasticsearch:
     build:
@@ -91,7 +68,7 @@ services:
       - cluster.name=godock-cluster
       - node.name=godock-node
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
       - cluster.initial_master_nodes=godock-node
     ulimits:
       memlock:
@@ -134,4 +111,38 @@ services:
       - elasticsearch
     networks:
       - frontend
+      - backend
+### Zookeeper ##############################################
+  zookeeper:
+    build: 
+      context: ./zookeeper
+    ports:
+      - "${ZOOKEEPER_PORT}:2181"
+    restart: always
+    depends_on:
+      - elasticsearch
+    networks:
+      - backend
+  kafka:
+    build:
+      context: ./kafka
+    restart: 
+      always
+    ports:
+      - "${KAKFA_PORT}:9092"
+    expose: 
+      [9092]
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_PORT: "${KAKFA_PORT}"
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx256m
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
       - backend
