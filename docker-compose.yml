@@ -21,6 +21,8 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   kafka:
     driver: ${VOLUMES_DRIVER}
+  etcd:
+    driver: ${VOLUMES_DRIVER}
 services:
   ## MySQL ################################################
   mysql:
@@ -146,3 +148,25 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - backend
+### ETCD
+  etcd: 
+    container_name: etcd0
+    build:
+      context: ./etcd
+    ports:
+      - "${ETCD_HOST_PORT_1}:2379"
+      - "${ETCD_HOST_PORT_2}:2380"
+    volumes:
+      - ${DATA_PATH_HOST}/etcd:/etcd-data
+    command: 
+      /usr/local/bin/etcd
+      -name etcd0
+      -data-dir /etcd-data
+      -initial-advertise-peer-urls http://${HOST_IP}:2380
+      -listen-peer-urls http://0.0.0.0:2380
+      -advertise-client-urls http://${HOST_IP}:2379
+      -listen-client-urls http://0.0.0.0:2379 
+      -initial-cluster etcd0=http://${HOST_IP}:2380
+    networks:
+      - backend
+      - frontend
