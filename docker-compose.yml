@@ -23,6 +23,14 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   etcd:
     driver: ${VOLUMES_DRIVER}
+  consul-server1:
+    driver: ${VOLUMES_DRIVER}
+  consul-server2:
+    driver: ${VOLUMES_DRIVER}
+  consul-server3:
+    driver: ${VOLUMES_DRIVER}
+  consul-client:
+    driver: ${VOLUMES_DRIVER}
 services:
   ## MySQL ################################################
   mysql:
@@ -65,7 +73,7 @@ services:
       args:
         - ELK_VERSION=${ELK_VERSION}
     volumes:
-      - elasticsearch:/usr/share/elasticsearch/data
+      - ${DATA_PATH_HOST}/elasticsearch:/usr/share/elasticsearch/data
     environment:
       - cluster.name=godock-cluster
       - node.name=godock-node
@@ -170,3 +178,56 @@ services:
     networks:
       - backend
       - frontend
+
+### Consule
+  consul-server1:
+    image: consul:1.9.3
+    container_name: consul-server1
+    restart: always
+    volumes:
+      - ./consul/server1.json:/consul/config/server1.json:ro
+      - ./consul/consul_acl.json:/consul/config/consul_acl.json:ro
+      - ./consul/certs/:/consul/config/certs/:ro
+    networks:
+      - backend
+    ports:
+      - '8500:8500'
+      - '8600:8600/tcp'
+      - '8600:8600/udp'
+    command: 'agent -bootstrap-expect=3'
+
+  consul-server2:
+    image: consul:1.9.3
+    container_name: consul-server2
+    restart: always
+    volumes:
+      - ./consul/server2.json:/consul/config/server2.json:ro
+      - ./consul/consul_acl.json:/consul/config/consul_acl.json:ro
+      - ./consul/certs/:/consul/config/certs/:ro
+    networks:
+      - backend
+    command: 'agent -bootstrap-expect=3'
+
+  consul-server3:
+    image: consul:1.9.3
+    container_name: consul-server3
+    restart: always
+    volumes:
+      - ./consul/server3.json:/consul/config/server3.json:ro
+      - ./consul/consul_acl.json:/consul/config/consul_acl.json:ro
+      - ./consul/certs/:/consul/config/certs/:ro
+    networks:
+      - backend
+    command: 'agent -bootstrap-expect=3'
+
+  consul-client:
+    image: consul:1.9.3
+    container_name: consul-client
+    restart: always
+    volumes:
+      - ./consul/client.json:/consul/config/client.json:ro
+      - ./consul/consul_acl.json:/consul/config/consul_acl.json:ro
+      - ./consul/certs/:/consul/config/certs/:ro
+    networks:
+      - backend
+    command: 'agent'
